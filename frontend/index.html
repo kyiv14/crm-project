@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -53,171 +54,171 @@
     </div>
   </div>
 
-<script>
-  const API_URL = "https://crm-backend-8w9k.onrender.com"; // ← замени на свой
-  let clients = [];
-  let currentClientIndex = null;
-  let isAuthorized = false;
+  <script>
+    const API_URL = "https://crm-backend-8w9k.onrender.com";
+    let clients = [];
+    let currentClientIndex = null;
+    let isAuthorized = false;
 
-  async function fetchClients() {
-    const res = await fetch(\`\${API_URL}/clients\`);
-    clients = await res.json();
-    renderClients();
-  }
-
-  async function saveClient(client, id = null) {
-    const method = id ? 'PUT' : 'POST';
-    const endpoint = id ? \`\${API_URL}/clients/\${id}\` : \`\${API_URL}/clients\`;
-    await fetch(endpoint, {
-      method,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(client)
-    });
-    fetchClients();
-  }
-
-  async function deleteClient(id) {
-    await fetch(\`\${API_URL}/clients/\${id}\`, { method: 'DELETE' });
-    closeInfoModal();
-    fetchClients();
-  }
-
-  function normalizePhone(phone) {
-    let digits = phone.replace(/\\D/g, '');
-    if (!digits.startsWith('380')) {
-      if (digits.startsWith('0')) digits = '38' + digits;
-      else digits = '380' + digits;
+    async function fetchClients() {
+      const res = await fetch(\`\${API_URL}/clients\`);
+      clients = await res.json();
+      renderClients();
     }
-    return digits;
-  }
 
-  function pluralDays(n) {
-    const mod10 = n % 10;
-    const mod100 = n % 100;
-    if (mod10 === 1 && mod100 !== 11) return 'день';
-    if ([2, 3, 4].includes(mod10) && ![12, 13, 14].includes(mod100)) return 'дня';
-    return 'дней';
-  }
-
-  function calculateDaysLeft(paydateStr) {
-    const paydate = new Date(paydateStr);
-    const expireDate = new Date(paydate);
-    expireDate.setDate(expireDate.getDate() + 30);
-    const today = new Date();
-    const diffMs = expireDate - today;
-    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-    return Math.max(0, diffDays);
-  }
-
-  function renderClients(filter = '') {
-    const container = document.getElementById('clientsContainer');
-    container.innerHTML = '';
-    clients.forEach((client, index) => {
-      if (filter && !client.phone.includes(filter)) return;
-      const daysLeft = calculateDaysLeft(client.paydate);
-      const btn = document.createElement('button');
-      btn.className = \`w-full \${daysLeft === 2 ? 'bg-red-500 text-white' : 'bg-gray-100 text-red-600'} font-bold py-3 px-4 rounded-xl shadow hover:opacity-90 text-left text-2xl\`;
-      btn.textContent = client.phone;
-      btn.onclick = () => {
-        currentClientIndex = index;
-        showClientInfo(client);
-      };
-      container.appendChild(btn);
-    });
-  }
-
-  function openModal(index = null) {
-    document.getElementById('modal').classList.replace('hidden', 'flex');
-    const form = document.getElementById('clientForm');
-    if (index !== null) {
-      const c = clients[index];
-      form.phone.value = c.phone;
-      form.email.value = c.email;
-      form.key.value = c.key;
-      form.viber.value = c.viber;
-      form.paydate.value = c.paydate;
-      document.getElementById('clientIndex').value = c.id;
-      document.getElementById('modalTitle').textContent = "Редактировать клиента";
-    } else {
-      form.reset();
-      document.getElementById('clientIndex').value = '';
-      document.getElementById('modalTitle').textContent = "Новый клиент";
-    }
-  }
-
-  function closeModal() {
-    document.getElementById('modal').classList.replace('flex', 'hidden');
-  }
-
-  function closeInfoModal() {
-    document.getElementById('infoModal').classList.replace('flex', 'hidden');
-  }
-
-  function showClientInfo(client) {
-    const pd = normalizePhone(client.phone);
-    const daysLeft = calculateDaysLeft(client.paydate);
-    const info = document.getElementById('clientInfo');
-    info.innerHTML = \`
-      <div class="flex items-center gap-3">📞 <a href="tel:\${pd}" class="text-black no-underline">\${client.phone}</a></div>
-      <div class="flex items-center gap-3">📧 <a href="mailto:\${client.email}" class="text-black no-underline">\${client.email}</a></div>
-      <div class="flex items-center gap-3">📲 <a href="viber://add?number=\${pd}" class="text-black no-underline">\${client.viber}</a></div>
-      <div class="flex items-center gap-3">🔗 <a href="https://is.gd/\${pd}" target="_blank" class="text-black no-underline">https://is.gd/\${pd}</a></div>
-      <div class="flex items-center gap-3">🗓️ <span class="text-black">\${new Date(client.paydate).toLocaleDateString()}</span></div>
-      <div class="flex items-center gap-3">⏳ <span class="text-red-600 font-bold text-xl">Тариф заканчивается через: \${daysLeft} \${pluralDays(daysLeft)}</span></div>
-      <button onclick="deleteClient(\${client.id})" class="mt-2 w-full bg-red-600 text-white py-2 rounded-xl hover:opacity-80 transition">Удалить</button>
-    \`;
-    document.getElementById('infoModal').classList.replace('hidden', 'flex');
-  }
-
-  document.getElementById('clientForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const phone = normalizePhone(e.target.phone.value.trim());
-    const email = e.target.email.value.trim();
-    const key = e.target.key.value.trim();
-    const viber = e.target.viber.value.trim();
-    const paydate = e.target.paydate.value;
-    const id = e.target.clientIndex.value;
-    const clientData = { phone, email, key, viber, paydate };
-    await saveClient(clientData, id || null);
-    closeModal();
-  });
-
-  document.getElementById('editBtn').onclick = () => {
-    closeInfoModal();
-    openModal(currentClientIndex);
-  };
-
-  function showLoginForm() {
-    const loginForm = document.createElement('div');
-    loginForm.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
-    loginForm.innerHTML = \`
-      <div class="bg-white rounded-3xl shadow-xl w-full max-w-sm p-6">
-        <h2 class="text-xl font-semibold mb-4">Авторизация</h2>
-        <input id="loginInput" class="w-full border rounded-xl px-4 py-2 mb-2" placeholder="Логин">
-        <input id="passwordInput" type="password" class="w-full border rounded-xl px-4 py-2 mb-4" placeholder="Пароль">
-        <button class="w-full bg-black text-white py-2 rounded-xl hover:opacity-80 transition" onclick="checkLogin()">Войти</button>
-      </div>
-    \`;
-    loginForm.id = "loginFormModal";
-    document.body.appendChild(loginForm);
-  }
-
-  function checkLogin() {
-    const login = document.getElementById('loginInput').value.trim();
-    const pass = document.getElementById('passwordInput').value.trim();
-    if (login === 'zpv' && pass === '11111111') {
-      isAuthorized = true;
-      document.getElementById('loginFormModal').remove();
-      document.getElementById('clientsContainer').style.display = '';
-      document.getElementById('searchInput').style.display = '';
-      document.getElementById('addClientBtn').style.display = '';
+    async function saveClient(client, id = null) {
+      const method = id ? 'PUT' : 'POST';
+      const endpoint = id ? \`\${API_URL}/clients/\${id}\` : \`\${API_URL}/clients\`;
+      await fetch(endpoint, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(client)
+      });
       fetchClients();
-    } else {
-      alert('Неверный логин или пароль');
     }
-  }
 
-  window.onload = showLoginForm;
-</script>
+    async function deleteClient(id) {
+      await fetch(\`\${API_URL}/clients/\${id}\`, { method: 'DELETE' });
+      closeInfoModal();
+      fetchClients();
+    }
+
+    function normalizePhone(phone) {
+      let digits = phone.replace(/\D/g, '');
+      if (!digits.startsWith('380')) {
+        if (digits.startsWith('0')) digits = '38' + digits;
+        else digits = '380' + digits;
+      }
+      return digits;
+    }
+
+    function pluralDays(n) {
+      const mod10 = n % 10;
+      const mod100 = n % 100;
+      if (mod10 === 1 && mod100 !== 11) return 'день';
+      if ([2, 3, 4].includes(mod10) && ![12, 13, 14].includes(mod100)) return 'дня';
+      return 'дней';
+    }
+
+    function calculateDaysLeft(paydateStr) {
+      const paydate = new Date(paydateStr);
+      const expireDate = new Date(paydate);
+      expireDate.setDate(expireDate.getDate() + 30);
+      const today = new Date();
+      const diffMs = expireDate - today;
+      const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+      return Math.max(0, diffDays);
+    }
+
+    function renderClients(filter = '') {
+      const container = document.getElementById('clientsContainer');
+      container.innerHTML = '';
+      clients.forEach((client, index) => {
+        if (filter && !client.phone.includes(filter)) return;
+        const daysLeft = calculateDaysLeft(client.paydate);
+        const btn = document.createElement('button');
+        btn.className = \`w-full \${daysLeft === 2 ? 'bg-red-500 text-white' : 'bg-gray-100 text-red-600'} font-bold py-3 px-4 rounded-xl shadow hover:opacity-90 text-left text-2xl\`;
+        btn.textContent = client.phone;
+        btn.onclick = () => {
+          currentClientIndex = index;
+          showClientInfo(client);
+        };
+        container.appendChild(btn);
+      });
+    }
+
+    function openModal(index = null) {
+      document.getElementById('modal').classList.replace('hidden', 'flex');
+      const form = document.getElementById('clientForm');
+      if (index !== null) {
+        const c = clients[index];
+        form.phone.value = c.phone;
+        form.email.value = c.email;
+        form.key.value = c.key;
+        form.viber.value = c.viber;
+        form.paydate.value = c.paydate;
+        document.getElementById('clientIndex').value = c.id;
+        document.getElementById('modalTitle').textContent = "Редактировать клиента";
+      } else {
+        form.reset();
+        document.getElementById('clientIndex').value = '';
+        document.getElementById('modalTitle').textContent = "Новый клиент";
+      }
+    }
+
+    function closeModal() {
+      document.getElementById('modal').classList.replace('flex', 'hidden');
+    }
+
+    function closeInfoModal() {
+      document.getElementById('infoModal').classList.replace('flex', 'hidden');
+    }
+
+    function showClientInfo(client) {
+      const pd = normalizePhone(client.phone);
+      const daysLeft = calculateDaysLeft(client.paydate);
+      const info = document.getElementById('clientInfo');
+      info.innerHTML = \`
+        <div class="flex items-center gap-3">📞 <a href="tel:\${pd}" class="text-black no-underline">\${client.phone}</a></div>
+        <div class="flex items-center gap-3">📧 <a href="mailto:\${client.email}" class="text-black no-underline">\${client.email}</a></div>
+        <div class="flex items-center gap-3">📲 <a href="viber://add?number=\${pd}" class="text-black no-underline">\${client.viber}</a></div>
+        <div class="flex items-center gap-3">🔗 <a href="https://is.gd/\${pd}" target="_blank" class="text-black no-underline">https://is.gd/\${pd}</a></div>
+        <div class="flex items-center gap-3">🗓️ <span class="text-black">\${new Date(client.paydate).toLocaleDateString()}</span></div>
+        <div class="flex items-center gap-3">⏳ <span class="text-red-600 font-bold text-xl">Тариф заканчивается через: \${daysLeft} \${pluralDays(daysLeft)}</span></div>
+        <button onclick="deleteClient(\${client.id})" class="mt-2 w-full bg-red-600 text-white py-2 rounded-xl hover:opacity-80 transition">Удалить</button>
+      \`;
+      document.getElementById('infoModal').classList.replace('hidden', 'flex');
+    }
+
+    document.getElementById('clientForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const phone = normalizePhone(e.target.phone.value.trim());
+      const email = e.target.email.value.trim();
+      const key = e.target.key.value.trim();
+      const viber = e.target.viber.value.trim();
+      const paydate = e.target.paydate.value;
+      const id = e.target.clientIndex.value;
+      const clientData = { phone, email, key, viber, paydate };
+      await saveClient(clientData, id || null);
+      closeModal();
+    });
+
+    document.getElementById('editBtn').onclick = () => {
+      closeInfoModal();
+      openModal(currentClientIndex);
+    };
+
+    function showLoginForm() {
+      const loginForm = document.createElement('div');
+      loginForm.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+      loginForm.innerHTML = \`
+        <div class="bg-white rounded-3xl shadow-xl w-full max-w-sm p-6">
+          <h2 class="text-xl font-semibold mb-4">Авторизация</h2>
+          <input id="loginInput" class="w-full border rounded-xl px-4 py-2 mb-2" placeholder="Логин">
+          <input id="passwordInput" type="password" class="w-full border rounded-xl px-4 py-2 mb-4" placeholder="Пароль">
+          <button class="w-full bg-black text-white py-2 rounded-xl hover:opacity-80 transition" onclick="checkLogin()">Войти</button>
+        </div>
+      \`;
+      loginForm.id = "loginFormModal";
+      document.body.appendChild(loginForm);
+    }
+
+    function checkLogin() {
+      const login = document.getElementById('loginInput').value.trim();
+      const pass = document.getElementById('passwordInput').value.trim();
+      if (login === 'zpv' && pass === '11111111') {
+        isAuthorized = true;
+        document.getElementById('loginFormModal').remove();
+        document.getElementById('clientsContainer').style.display = '';
+        document.getElementById('searchInput').style.display = '';
+        document.getElementById('addClientBtn').style.display = '';
+        fetchClients();
+      } else {
+        alert('Неверный логин или пароль');
+      }
+    }
+
+    window.onload = showLoginForm;
+  </script>
 </body>
 </html>
